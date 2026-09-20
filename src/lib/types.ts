@@ -68,8 +68,9 @@ export interface Doctor {
 }
 
 export type ThreeScale = "yes" | "somewhat" | "no";
-export type RecommendAnswer = "yes" | "maybe" | "no";
-export type WaitBucket = "<15" | "15-30" | "30-60" | ">60";
+export type NeedAnswer = "yes" | "partially" | "no";
+export type AgainAnswer = "yes" | "maybe" | "no";
+export type YesNo = "yes" | "no";
 
 export interface Review {
   id: string;
@@ -78,11 +79,21 @@ export interface Review {
   communityId: string | null;
   /** Public-facing label only. Never a name. */
   reviewerDisplayLabel: string;
-  listening: ThreeScale;
-  explanation: ThreeScale;
-  feesClear: boolean;
-  waitTime: WaitBucket;
-  wouldRecommend: RecommendAnswer;
+  /** Short, general reason for the visit, e.g. "Skin consultation". Kept non-clinical. */
+  visitReason: string;
+  /** Did visiting this doctor address that need? */
+  addressedNeed: NeedAnswer;
+  /** Did the doctor listen and explain things clearly? */
+  listenedExplained: ThreeScale;
+  /** Would you consult this doctor again? */
+  consultAgain: AgainAnswer;
+  /** Would you recommend this doctor to someone with a similar need? */
+  wouldRecommend: YesNo;
+  /** Best part of the experience (tags and/or short text) */
+  bestPart: string;
+  /** What could be improved */
+  improvement: string;
+  /** Combined free text that was moderated; shown as the quote */
   writtenExperience: string;
   aiThemes: string[];
   aiSummary: string;

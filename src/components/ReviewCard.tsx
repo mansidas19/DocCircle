@@ -1,6 +1,6 @@
-import { Clock, ShieldCheck, Tag, ThumbsDown, ThumbsUp, Minus } from "lucide-react";
+import { ShieldCheck, Sparkles, Stethoscope, Tag, ThumbsDown, ThumbsUp, Wrench } from "lucide-react";
 import type { Review } from "@/lib/types";
-import { WAIT_LABEL, cn, timeAgo } from "@/lib/utils";
+import { cn, timeAgo } from "@/lib/utils";
 
 interface Props {
   review: Review;
@@ -10,15 +10,29 @@ interface Props {
   mine?: boolean;
 }
 
-const REC: Record<Review["wouldRecommend"], { label: string; icon: typeof ThumbsUp; cls: string }> = {
-  yes: { label: "Would recommend", icon: ThumbsUp, cls: "border-brand-200 bg-brand-50 text-brand-800" },
-  maybe: { label: "Might recommend", icon: Minus, cls: "border-slate-200 bg-slate-50 text-slate-700" },
-  no: { label: "Would not recommend", icon: ThumbsDown, cls: "border-rose-200 bg-rose-50 text-rose-800" },
+const ANSWER_LABEL: Record<string, string> = {
+  yes: "Yes",
+  partially: "Partially",
+  somewhat: "Somewhat",
+  maybe: "Maybe",
+  no: "No",
 };
 
+function Answer({ label, value }: { label: string; value: string }) {
+  const good = value === "yes";
+  const bad = value === "no";
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className="text-slate-500">{label}:</span>
+      <span className={cn("font-semibold", good ? "text-brand-800" : bad ? "text-rose-700" : "text-slate-700")}>
+        {ANSWER_LABEL[value] ?? value}
+      </span>
+    </span>
+  );
+}
+
 export default function ReviewCard({ review, relevant = false, mine = false }: Props) {
-  const rec = REC[review.wouldRecommend];
-  const RecIcon = rec.icon;
+  const recommends = review.wouldRecommend === "yes";
 
   return (
     <article className={cn("card p-5", relevant && "ring-1 ring-peer-200")}>
@@ -43,14 +57,26 @@ export default function ReviewCard({ review, relevant = false, mine = false }: P
             </p>
           </div>
         </div>
-        <span className={cn("chip", rec.cls)}>
-          <RecIcon className="h-3 w-3" aria-hidden />
-          {rec.label}
+        <span
+          className={cn(
+            "chip",
+            recommends ? "border-brand-200 bg-brand-50 text-brand-800" : "border-rose-200 bg-rose-50 text-rose-800",
+          )}
+        >
+          {recommends ? <ThumbsUp className="h-3 w-3" aria-hidden /> : <ThumbsDown className="h-3 w-3" aria-hidden />}
+          {recommends ? "Recommends for a similar need" : "Would not recommend"}
         </span>
       </header>
 
+      {review.visitReason && (
+        <p className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
+          <Stethoscope className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+          Visited for: {review.visitReason}
+        </p>
+      )}
+
       {review.aiThemes.length > 0 && (
-        <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="Experience themes">
+        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Experience themes">
           {review.aiThemes.map((t) => (
             <li key={t} className="chip border-slate-200 bg-white text-slate-700">
               <Tag className="h-3 w-3 text-slate-400" aria-hidden />
@@ -68,15 +94,32 @@ export default function ReviewCard({ review, relevant = false, mine = false }: P
         <p className="mt-3 text-sm italic text-slate-500">{review.aiSummary}</p>
       )}
 
-      <footer className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-        <span className="inline-flex items-center gap-1">
-          <Clock className="h-3.5 w-3.5" aria-hidden />
-          {WAIT_LABEL[review.waitTime]}
-        </span>
-        <span>Listened: {review.listening}</span>
-        <span>Explained clearly: {review.explanation}</span>
-        <span>Fees clear: {review.feesClear ? "yes" : "no"}</span>
-        <span className="ml-auto">{timeAgo(review.createdAt)}</span>
+      {(review.bestPart || review.improvement) && (
+        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          {review.bestPart && (
+            <div className="rounded-xl bg-brand-50/60 p-3">
+              <dt className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-brand-800">
+                <Sparkles className="h-3 w-3" aria-hidden /> Best part
+              </dt>
+              <dd className="mt-0.5 text-slate-800">{review.bestPart}</dd>
+            </div>
+          )}
+          {review.improvement && (
+            <div className="rounded-xl bg-peer-50/70 p-3">
+              <dt className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-peer-800">
+                <Wrench className="h-3 w-3" aria-hidden /> Could improve
+              </dt>
+              <dd className="mt-0.5 text-slate-800">{review.improvement}</dd>
+            </div>
+          )}
+        </dl>
+      )}
+
+      <footer className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        <Answer label="Need addressed" value={review.addressedNeed} />
+        <Answer label="Listened & explained" value={review.listenedExplained} />
+        <Answer label="Would consult again" value={review.consultAgain} />
+        <span className="ml-auto text-slate-500">{timeAgo(review.createdAt)}</span>
       </footer>
     </article>
   );

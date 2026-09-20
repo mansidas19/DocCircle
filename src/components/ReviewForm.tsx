@@ -6,26 +6,58 @@ import { useMemo, useState, type FormEvent } from "react";
 import { AlertTriangle, Check, CheckCircle2, Loader2, ShieldCheck, Sparkles, XCircle } from "lucide-react";
 import { DOCTORS, SPECIALTIES } from "@/lib/demo-data";
 import { useCircle } from "@/lib/circle-store";
-import type { ModerationResponse, RecommendAnswer, Review, Sentiment, ThreeScale, WaitBucket } from "@/lib/types";
+import type {
+  AgainAnswer,
+  ModerationResponse,
+  NeedAnswer,
+  Review,
+  Sentiment,
+  ThreeScale,
+  YesNo,
+} from "@/lib/types";
 import { cn, reviewerLabelFor } from "@/lib/utils";
 
 type Step = "form" | "submitting" | "flagged" | "done" | "error";
 
+const NEED: Array<{ value: NeedAnswer; label: string }> = [
+  { value: "yes", label: "Yes" },
+  { value: "partially", label: "Partially" },
+  { value: "no", label: "No" },
+];
 const THREE: Array<{ value: ThreeScale; label: string }> = [
   { value: "yes", label: "Yes" },
   { value: "somewhat", label: "Somewhat" },
   { value: "no", label: "No" },
 ];
-const WAITS: Array<{ value: WaitBucket; label: string }> = [
-  { value: "<15", label: "Under 15 min" },
-  { value: "15-30", label: "15–30 min" },
-  { value: "30-60", label: "30–60 min" },
-  { value: ">60", label: "Over 60 min" },
-];
-const REC: Array<{ value: RecommendAnswer; label: string }> = [
+const AGAIN: Array<{ value: AgainAnswer; label: string }> = [
   { value: "yes", label: "Yes" },
   { value: "maybe", label: "Maybe" },
   { value: "no", label: "No" },
+];
+const YESNO: Array<{ value: YesNo; label: string }> = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+];
+
+const BEST_TAGS = [
+  "Listened patiently",
+  "Explained clearly",
+  "Transparent fees",
+  "Short wait",
+  "Friendly staff",
+  "Didn't push extra tests",
+  "Easy to reach",
+];
+
+const REASON_SUGGESTIONS = [
+  "Skin consultation",
+  "Knee pain",
+  "Routine check-up",
+  "Second opinion",
+  "Tooth pain",
+  "Fever & cold",
+  "Pregnancy care",
+  "Sinus consultation",
 ];
 
 const SENTIMENT_STYLE: Record<Sentiment, string> = {
@@ -74,12 +106,14 @@ export default function ReviewForm() {
   const pendingOnes = myCommunities.filter((c) => membershipFor(c.id)?.status !== "verified");
 
   const [doctorId, setDoctorId] = useState(params.get("doctorId") ?? "");
-  const [listening, setListening] = useState<ThreeScale | "">("");
-  const [explanation, setExplanation] = useState<ThreeScale | "">("");
-  const [feesClear, setFeesClear] = useState<"yes" | "no" | "">("");
-  const [waitTime, setWaitTime] = useState<WaitBucket | "">("");
-  const [wouldRecommend, setWouldRecommend] = useState<RecommendAnswer | "">("");
-  const [written, setWritten] = useState("");
+  const [visitReason, setVisitReason] = useState("");
+  const [addressedNeed, setAddressedNeed] = useState<NeedAnswer | "">("");
+  const [listenedExplained, setListenedExplained] = useState<ThreeScale | "">("");
+  const [consultAgain, setConsultAgain] = useState<AgainAnswer | "">("");
+  const [wouldRecommend, setWouldRecommend] = useState<YesNo | "">("");
+  const [bestTags, setBestTags] = useState<string[]>([]);
+  const [bestText, setBestText] = useState("");
+  const [improvement, setImprovement] = useState("");
   const [communityId, setCommunityId] = useState<string>("c-nit");
 
   const [step, setStep] = useState<Step>("form");
@@ -92,17 +126,28 @@ export default function ReviewForm() {
     [],
   );
 
+  const written = [bestText.trim(), improvement.trim()].filter(Boolean).join(" ");
+  const charCount = bestText.length + improvement.length;
+
+  function toggleTag(t: string) {
+    setBestTags((tags) => (tags.includes(t) ? tags.filter((x) => x !== t) : [...tags, t]));
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!doctorId || !listening || !explanation || !feesClear || !waitTime || !wouldRecommend) return;
+    if (!doctorId || !visitReason.trim() || !addressedNeed || !listenedExplained || !consultAgain || !wouldRecommend) return;
     setStep("submitting");
     setErrorMsg(null);
 
     try {
+      // Everything free-text goes through moderation, including the visit reason.
+      const toModerate = [visitReason.trim() ? `Visit reason: ${visitReason.trim()}.` : "", written]
+        .filter(Boolean)
+        .join(" ");
       const res = await fetch("/api/moderate-review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ writtenExperience: written }),
+        body: JSON.stringify({ writtenExperience: toModerate }),
       });
       const data = (await res.json()) as ModerationResponse & { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Moderation failed");
@@ -114,18 +159,22 @@ export default function ReviewForm() {
       }
 
       const community = postable.find((c) => c.id === communityId);
+      const bestPart = [...bestTags, bestText.trim()].filter(Boolean).join(", ");
+      const themes = [...new Set([...bestTags, ...data.result.experienceThemes])].slice(0, 5);
       const review: Review = {
         id: `rv-local-${crypto.randomUUID()}`,
         doctorId,
         communityId: community ? community.id : null,
         reviewerDisplayLabel: reviewerLabelFor(community),
-        listening,
-        explanation,
-        feesClear: feesClear === "yes",
-        waitTime,
+        visitReason: visitReason.trim(),
+        addressedNeed,
+        listenedExplained,
+        consultAgain,
         wouldRecommend,
-        writtenExperience: written.trim(),
-        aiThemes: data.result.experienceThemes,
+        bestPart,
+        improvement: improvement.trim(),
+        writtenExperience: written,
+        aiThemes: themes,
         aiSummary: data.result.safeSummary,
         safeToPublish: true,
         createdAt: new Date().toISOString().slice(0, 10),
@@ -136,6 +185,19 @@ export default function ReviewForm() {
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
       setStep("error");
     }
+  }
+
+  function resetForm() {
+    setStep("form");
+    setModeration(null);
+    setVisitReason("");
+    setAddressedNeed("");
+    setListenedExplained("");
+    setConsultAgain("");
+    setWouldRecommend("");
+    setBestTags([]);
+    setBestText("");
+    setImprovement("");
   }
 
   /* ---------- Result screens ---------- */
@@ -164,41 +226,48 @@ export default function ReviewForm() {
           <div className="rounded-2xl border border-slate-200 p-5">
             <p className="eyebrow flex items-center gap-1.5 text-brand-700">
               <Sparkles className="h-3.5 w-3.5" aria-hidden />
-              Experience captured by Fable
+              Experience captured
             </p>
             <dl className="mt-3 space-y-2 text-sm">
               {(
                 [
-                  ["Communication", r.communication],
-                  ["Listening", r.listening],
-                  ["Fee transparency", r.feeTransparency],
-                  ["Waiting experience", r.waitTime],
-                ] as Array<[string, Sentiment]>
-              ).map(([label, s]) => (
+                  ["Need addressed", addressedNeed],
+                  ["Listened & explained", listenedExplained],
+                  ["Would consult again", consultAgain],
+                  ["Would recommend", wouldRecommend],
+                ] as Array<[string, string]>
+              ).map(([label, v]) => (
                 <div key={label} className="flex items-center justify-between gap-3">
                   <dt className="flex items-center gap-2 text-slate-700">
                     <Check className="h-4 w-4 text-brand-700" aria-hidden />
                     {label}
                   </dt>
+                  <dd className="chip border-slate-200 bg-slate-50 capitalize text-slate-700">{v}</dd>
+                </div>
+              ))}
+              {(
+                [
+                  ["Communication tone", r.communication],
+                  ["Listening tone", r.listening],
+                ] as Array<[string, Sentiment]>
+              ).map(([label, s]) => (
+                <div key={label} className="flex items-center justify-between gap-3">
+                  <dt className="flex items-center gap-2 text-slate-700">
+                    <Sparkles className="h-4 w-4 text-brand-700" aria-hidden />
+                    {label}
+                  </dt>
                   <dd className={cn("chip capitalize", SENTIMENT_STYLE[s])}>{s}</dd>
                 </div>
               ))}
-              <div className="flex items-center justify-between gap-3">
-                <dt className="flex items-center gap-2 text-slate-700">
-                  <Check className="h-4 w-4 text-brand-700" aria-hidden />
-                  Would recommend
-                </dt>
-                <dd className="chip border-slate-200 bg-slate-50 capitalize text-slate-700">{wouldRecommend}</dd>
-              </div>
             </dl>
           </div>
 
           <div className="rounded-2xl border border-slate-200 p-5">
             <p className="eyebrow">Safe public summary</p>
             <p className="mt-3 text-[15px] leading-relaxed text-slate-800">&ldquo;{r.safeSummary}&rdquo;</p>
-            {r.experienceThemes.length > 0 && (
+            {(bestTags.length > 0 || r.experienceThemes.length > 0) && (
               <ul className="mt-3 flex flex-wrap gap-1.5">
-                {r.experienceThemes.map((t) => (
+                {[...new Set([...bestTags, ...r.experienceThemes])].map((t) => (
                   <li key={t} className="chip border-brand-100 bg-brand-50 text-brand-800">✓ {t}</li>
                 ))}
               </ul>
@@ -210,9 +279,7 @@ export default function ReviewForm() {
         <div className="mt-6 flex flex-wrap gap-3">
           <Link href={`/doctors/${doctorId}`} className="btn-primary">See it on the profile</Link>
           <Link href={`/doctors?specialty=${doctor?.specialty}&city=${doctor?.city}`} className="btn-secondary">Back to search</Link>
-          <button type="button" className="btn-ghost" onClick={() => { setStep("form"); setWritten(""); setModeration(null); }}>
-            Share another
-          </button>
+          <button type="button" className="btn-ghost" onClick={resetForm}>Share another</button>
         </div>
       </div>
     );
@@ -228,10 +295,8 @@ export default function ReviewForm() {
           </span>
           <div>
             <p className="eyebrow text-peer-700">Needs a small edit before publishing</p>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-              Let&apos;s keep this safe and useful
-            </h2>
-            <p className="mt-2 text-slate-700">{r.userMessage || "Please revise your written experience."}</p>
+            <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Let&apos;s keep this safe and useful</h2>
+            <p className="mt-2 text-slate-700">{r.userMessage || "Please revise your written answers."}</p>
           </div>
         </div>
 
@@ -247,8 +312,8 @@ export default function ReviewForm() {
         <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
           <p className="font-semibold text-slate-800">Tip</p>
           <p className="mt-1">
-            Describe how the visit felt: did the doctor listen, explain clearly, were fees and
-            waiting reasonable? Avoid diagnoses, prescriptions, outcomes, names and contact details.
+            Keep the visit reason general (e.g. &ldquo;skin consultation&rdquo;) and describe how the
+            visit felt. Avoid diagnoses, prescriptions, outcomes, names and contact details.
           </p>
         </div>
         <ModeBadge mode={moderation.mode} model={moderation.model} />
@@ -278,49 +343,101 @@ export default function ReviewForm() {
         </select>
       </div>
 
+      {/* Need */}
+      <div>
+        <label htmlFor="reason" className="label">What was your need / reason for this visit?</label>
+        <input
+          id="reason"
+          list="reason-suggestions"
+          value={visitReason}
+          onChange={(e) => setVisitReason(e.target.value)}
+          className="input"
+          placeholder="e.g. Skin consultation, knee pain, routine check-up"
+          maxLength={60}
+          required
+        />
+        <datalist id="reason-suggestions">
+          {REASON_SUGGESTIONS.map((r) => <option key={r} value={r} />)}
+        </datalist>
+        <p className="mt-1 text-xs text-slate-500">
+          Keep it general. This helps people with a similar need, and is checked for personal or clinical detail.
+        </p>
+      </div>
+
       <div className="grid gap-6 sm:grid-cols-2">
         <div>
-          <p id="listening-label" className="label">Did the doctor listen carefully?</p>
-          <Segmented name="listening" value={listening} onChange={setListening} options={THREE} />
+          <p id="need-label" className="label">Did visiting this doctor address the need you mentioned?</p>
+          <Segmented name="need" value={addressedNeed} onChange={setAddressedNeed} options={NEED} />
         </div>
         <div>
-          <p id="explanation-label" className="label">Did the doctor explain things clearly?</p>
-          <Segmented name="explanation" value={explanation} onChange={setExplanation} options={THREE} />
+          <p id="listen-label" className="label">Did the doctor listen and explain things clearly?</p>
+          <Segmented name="listen" value={listenedExplained} onChange={setListenedExplained} options={THREE} />
         </div>
         <div>
-          <p id="fees-label" className="label">Were fees clear?</p>
-          <Segmented name="fees" value={feesClear} onChange={setFeesClear} options={[{ value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
+          <p id="again-label" className="label">Would you consult this doctor again?</p>
+          <Segmented name="again" value={consultAgain} onChange={setConsultAgain} options={AGAIN} />
         </div>
         <div>
-          <p id="wait-label" className="label">How was the waiting experience?</p>
-          <Segmented name="wait" value={waitTime} onChange={setWaitTime} options={WAITS} />
-        </div>
-        <div className="sm:col-span-2">
-          <p id="recommend-label" className="label">Would you recommend this doctor?</p>
-          <Segmented name="recommend" value={wouldRecommend} onChange={setWouldRecommend} options={REC} />
+          <p id="recommend-label" className="label">Would you recommend this doctor to someone with a similar need?</p>
+          <Segmented name="recommend" value={wouldRecommend} onChange={setWouldRecommend} options={YESNO} />
         </div>
       </div>
 
-      {/* Written */}
+      {/* Best part */}
       <div>
-        <label htmlFor="written" className="label">
-          Written experience <span className="font-normal normal-case text-slate-400">(optional, moderated by Fable)</span>
+        <p className="label">
+          What was the best part of your experience? <span className="font-normal normal-case text-slate-400">(optional)</span>
+        </p>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Best part tags">
+          {BEST_TAGS.map((t) => {
+            const on = bestTags.includes(t);
+            return (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={on}
+                onClick={() => toggleTag(t)}
+                className={cn(
+                  "chip cursor-pointer px-3 py-1.5 text-sm transition",
+                  on ? "border-brand-600 bg-brand-700 text-white" : "border-slate-300 bg-white text-slate-700 hover:border-slate-400",
+                )}
+              >
+                {on && <Check className="h-3.5 w-3.5" aria-hidden />}
+                {t}
+              </button>
+            );
+          })}
+        </div>
+        <input
+          value={bestText}
+          onChange={(e) => setBestText(e.target.value)}
+          className="input mt-2"
+          maxLength={300}
+          placeholder="Anything else that stood out? (short answer)"
+          aria-label="Best part, short answer"
+        />
+      </div>
+
+      {/* Improvement */}
+      <div>
+        <label htmlFor="improve" className="label">
+          What could be improved? <span className="font-normal normal-case text-slate-400">(optional, moderated by Fable)</span>
         </label>
         <textarea
-          id="written"
-          value={written}
-          onChange={(e) => setWritten(e.target.value)}
-          rows={4}
-          maxLength={2000}
+          id="improve"
+          value={improvement}
+          onChange={(e) => setImprovement(e.target.value)}
+          rows={3}
+          maxLength={600}
           className="input resize-y"
-          placeholder="Describe your experience. Please avoid sharing medical records, diagnoses, prescriptions, phone numbers, or other personal information."
+          placeholder="e.g. Shorter waiting time, clearer fees before the visit. Please avoid diagnoses, prescriptions, names or contact details."
         />
         <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
           <span className="inline-flex items-center gap-1">
             <ShieldCheck className="h-3.5 w-3.5 text-brand-700" aria-hidden />
             Fable checks for medical claims, personal info, abuse and spam before publishing.
           </span>
-          <span className="tabular-nums">{written.length}/2000</span>
+          <span className="tabular-nums">{charCount}/900</span>
         </div>
       </div>
 
@@ -378,7 +495,7 @@ function ModeBadge({ mode, model }: { mode: "fable" | "mock"; model?: string }) 
   return (
     <p className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
       <Sparkles className="h-3 w-3 text-brand-700" aria-hidden />
-      {mode === "fable" ? `Moderated live by ${model ?? "Fable"}` : "Demo mode: deterministic mock moderation (no API key configured)"}
+      {mode === "fable" ? `Moderated live by ${model ?? "Fable"}` : "Offline moderation (no API key configured)"}
     </p>
   );
 }

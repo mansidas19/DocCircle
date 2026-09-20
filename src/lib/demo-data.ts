@@ -345,9 +345,45 @@ export const DOCTORS: Doctor[] = DOCTOR_BASE.map((d) => ({
   ...(DOCTOR_DETAILS[d.id] ?? { qualifications: "", specializations: [] }),
 }));
 
-// Helper to keep the review list readable.
-type R = Omit<Review, "id" | "safeToPublish" | "reviewerDisplayLabel"> & {
+// Seed reviews are authored in a compact legacy shape and converted to the
+// current questionnaire (need addressed / listened & explained / consult again /
+// recommend / best part / improvement) by r() below.
+type ThreeScale = "yes" | "somewhat" | "no";
+type LegacyWait = "<15" | "15-30" | "30-60" | ">60";
+type R = {
+  doctorId: string;
+  communityId: string | null;
   reviewerDisplayLabel?: string;
+  listening: ThreeScale;
+  explanation: ThreeScale;
+  feesClear: boolean;
+  waitTime: LegacyWait;
+  wouldRecommend: "yes" | "maybe" | "no";
+  writtenExperience: string;
+  aiThemes: string[];
+  aiSummary: string;
+  createdAt: string;
+  visitReason?: string;
+};
+
+/** General, non-clinical visit reasons per specialty. */
+const VISIT_REASONS: Record<string, string[]> = {
+  dermatology: ["Skin consultation", "Acne follow-up", "Hair & scalp concern", "Routine skin check"],
+  orthopedics: ["Knee pain", "Back pain", "Sports injury follow-up", "Joint consultation"],
+  gynecology: ["Routine check-up", "Pregnancy care", "Second opinion", "General consultation"],
+  cardiology: ["Routine heart check", "Blood pressure review", "Second opinion"],
+  dentistry: ["Routine cleaning", "Tooth pain", "Braces consultation", "Filling"],
+  ent: ["Sinus consultation", "Hearing check", "Throat concern"],
+  "general-medicine": ["General check-up", "Fever & cold", "Preventive health review"],
+};
+const WEAKER: Record<ThreeScale, number> = { yes: 2, somewhat: 1, no: 0 };
+const IMPROVEMENT_FOR: Record<string, string> = {
+  "Waiting time": "Shorter waiting time",
+  "Fee clarity": "Explain fees before the visit",
+  "Add-on costs": "Explain add-on costs up front",
+  "Brief consultation": "More time in the consultation",
+  "Rushed consultation": "More time in the consultation",
+  "Limited time for questions": "More time for questions",
 };
 let seq = 1;
 const COMMUNITY_REVIEWER_LABEL: Record<string, string> = {
@@ -357,13 +393,32 @@ const COMMUNITY_REVIEWER_LABEL: Record<string, string> = {
   "c-family": "Family circle",
 };
 function r(x: R): Review {
+  const n = seq++;
+  const doctor = DOCTOR_BASE.find((d) => d.id === x.doctorId);
+  const reasons = VISIT_REASONS[doctor?.specialty ?? ""] ?? ["General consultation"];
+  const listenedExplained: ThreeScale =
+    WEAKER[x.listening] <= WEAKER[x.explanation] ? x.listening : x.explanation;
+  const improvementThemes = x.aiThemes.filter((t) => IMPROVEMENT_FOR[t]);
+  const positiveThemes = x.aiThemes.filter((t) => !IMPROVEMENT_FOR[t]);
   return {
-    id: `rv-${String(seq++).padStart(3, "0")}`,
-    safeToPublish: true,
+    id: `rv-${String(n).padStart(3, "0")}`,
+    doctorId: x.doctorId,
+    communityId: x.communityId,
     reviewerDisplayLabel:
       x.reviewerDisplayLabel ??
       (x.communityId ? COMMUNITY_REVIEWER_LABEL[x.communityId] : "Verified visit"),
-    ...x,
+    visitReason: x.visitReason ?? reasons[n % reasons.length],
+    addressedNeed: x.wouldRecommend === "yes" ? "yes" : x.wouldRecommend === "maybe" ? "partially" : "no",
+    listenedExplained,
+    consultAgain: x.wouldRecommend,
+    wouldRecommend: x.wouldRecommend === "yes" ? "yes" : "no",
+    bestPart: positiveThemes.join(", "),
+    improvement: improvementThemes.map((t) => IMPROVEMENT_FOR[t]).join("; "),
+    writtenExperience: x.writtenExperience,
+    aiThemes: x.aiThemes,
+    aiSummary: x.aiSummary,
+    safeToPublish: true,
+    createdAt: x.createdAt,
   };
 }
 

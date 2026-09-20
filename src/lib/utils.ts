@@ -160,13 +160,6 @@ export function timeAgo(iso: string, now = new Date("2026-09-20")) {
   return `${m} month${m === 1 ? "" : "s"} ago`;
 }
 
-export const WAIT_LABEL: Record<Review["waitTime"], string> = {
-  "<15": "Under 15 min wait",
-  "15-30": "15–30 min wait",
-  "30-60": "30–60 min wait",
-  ">60": "Over 60 min wait",
-};
-
 export function formatFee(fee: number) {
   return `₹${fee.toLocaleString("en-IN")}`;
 }
