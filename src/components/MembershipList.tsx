@@ -8,6 +8,7 @@ import {
   KeyRound,
   Mail,
   ShieldCheck,
+  Sparkles,
   Users,
   X,
 } from "lucide-react";
@@ -34,13 +35,64 @@ const METHOD_LABEL: Record<VerificationMethod, string> = {
 
 /** Your communities with their verification status, plus the join/verify flows. */
 export default function MembershipList() {
-  const { myCommunities, allCommunities, memberships, membershipFor, joinCommunity, leaveCommunity } = useCircle();
+  const {
+    myCommunities,
+    allCommunities,
+    memberships,
+    membershipFor,
+    joinCommunity,
+    leaveCommunity,
+    suggestedCommunities,
+    profile,
+  } = useCircle();
   const [verifying, setVerifying] = useState<string | null>(null);
 
-  const notJoined = allCommunities.filter((c) => !memberships.some((m) => m.communityId === c.id));
+  const suggestedIds = new Set(suggestedCommunities.map((s) => s.community.id));
+  const notJoined = allCommunities.filter(
+    (c) => !memberships.some((m) => m.communityId === c.id) && !suggestedIds.has(c.id),
+  );
 
   return (
     <div className="space-y-6">
+      {/* Suggested from profile */}
+      {profile && (
+        <section aria-labelledby="suggested-heading" className="rounded-2xl border border-peer-200 bg-peer-50/60 p-4 sm:p-5">
+          <p className="eyebrow flex items-center gap-1.5 text-peer-700">
+            <Sparkles className="h-3.5 w-3.5" aria-hidden />
+            Suggested for you
+          </p>
+          <h3 id="suggested-heading" className="mt-1 text-base font-bold text-slate-900">
+            Groups that match your details
+          </h3>
+          {suggestedCommunities.length === 0 ? (
+            <p className="mt-2 text-sm text-slate-600">
+              You&apos;ve joined every group we could match. Add a college, employer or locality to
+              your details to see more.
+            </p>
+          ) : (
+            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+              {suggestedCommunities.map(({ community: c, reason }) => (
+                <li key={c.id} className="flex items-start justify-between gap-3 rounded-xl border border-white bg-white p-3 shadow-sm">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                      <Users className="h-3.5 w-3.5 text-slate-500" aria-hidden />
+                      {c.name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-peer-800">{reason}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{c.description}</p>
+                  </div>
+                  <button type="button" className="btn-primary shrink-0 px-3 py-1.5 text-xs" onClick={() => joinCommunity(c.id)}>
+                    Join
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      <div>
+        <p className="eyebrow mb-2">Your circles</p>
       <ul className="grid gap-3 sm:grid-cols-2">
         {myCommunities.map((c) => {
           const m = membershipFor(c.id)!;
@@ -90,15 +142,16 @@ export default function MembershipList() {
           );
         })}
       </ul>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <p className="text-sm font-semibold text-slate-900">Join a pre-built community</p>
+          <p className="text-sm font-semibold text-slate-900">Other communities</p>
           <p className="mt-1 text-xs text-slate-600">
             Request to join, then verify with your email or a document.
           </p>
           {notJoined.length === 0 ? (
-            <p className="mt-3 text-xs text-slate-500">You&apos;re a member of every available community.</p>
+            <p className="mt-3 text-xs text-slate-500">Nothing else to join right now.</p>
           ) : (
             <ul className="mt-3 space-y-2">
               {notJoined.map((c) => (
@@ -150,6 +203,7 @@ function VerifyPanel({
   const [error, setError] = useState<string | null>(null);
 
   const isAlumni = community.type === "alumni";
+  const isLocal = community.type === "local";
 
   function sendCode(e: FormEvent) {
     e.preventDefault();
@@ -203,9 +257,9 @@ function VerifyPanel({
           <div className="mt-3 flex flex-wrap gap-2" role="tablist" aria-label="Verification method">
             {(
               [
-                ["email-otp", Mail, isAlumni ? "Alumni email" : "Work email"],
-                ["document", FileUp, isAlumni ? "Degree / ID card" : "Employee ID / offer letter"],
-                ["invite-code", KeyRound, "Invite code"],
+                ["email-otp", Mail, isAlumni ? "Alumni email" : isLocal ? "Email code" : "Work email"],
+                ["document", FileUp, isAlumni ? "Degree / ID card" : isLocal ? "Address proof / society bill" : "Employee ID / offer letter"],
+                ["invite-code", KeyRound, isLocal ? "Society / RWA code" : "Invite code"],
               ] as Array<[Method, typeof Mail, string]>
             ).map(([m, Icon, label]) => (
               <button
@@ -229,7 +283,7 @@ function VerifyPanel({
             <form onSubmit={codeSent ? confirmCode : sendCode} className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
               {!codeSent ? (
                 <>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input" placeholder={isAlumni ? "you@alumni.college.edu" : "you@company.com"} />
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input" placeholder={isAlumni ? "you@alumni.college.edu" : isLocal ? "you@example.com" : "you@company.com"} />
                   <button type="submit" className="btn-primary px-3 py-2 text-xs">Send code</button>
                 </>
               ) : (

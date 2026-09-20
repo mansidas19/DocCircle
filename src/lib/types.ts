@@ -135,6 +135,8 @@ export interface UserProfile {
   email: string;
   phone: string;
   city: string;
+  /** Neighbourhood / locality, e.g. "HSR Layout" */
+  area: string;
   college: string;
   graduationYear: string;
   employer: string;

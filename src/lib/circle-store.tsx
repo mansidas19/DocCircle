@@ -46,7 +46,9 @@ interface CircleContextValue extends CircleState {
   selectedCommunities: Community[];
   verifiedCommunityIds: string[];
   membershipFor: (communityId: string) => Membership | undefined;
-  saveProfile: (p: Omit<UserProfile, "updatedAt">) => { added: Community[] };
+  /** Communities derived from the profile that the user has not joined yet */
+  suggestedCommunities: Array<{ community: Community; reason: string }>;
+  saveProfile: (p: Omit<UserProfile, "updatedAt">) => void;
   toggleCommunity: (id: string) => void;
   setSelected: (ids: string[]) => void;
   addCustomCommunity: (c: Community) => void;
@@ -92,6 +94,70 @@ function emailDomainMatches(email: string, org: string) {
   if (!domain) return false;
   const orgSlug = slugify(org).split("-")[0];
   return orgSlug.length >= 3 && domain.includes(orgSlug);
+}
+
+/** Communities a profile makes the user eligible for: college, employer, locality, city. */
+function deriveCommunities(p: UserProfile | null): Array<{ community: Community; reason: string }> {
+  if (!p) return [];
+  const out: Array<{ community: Community; reason: string }> = [];
+  const college = p.college.trim();
+  const employer = p.employer.trim();
+  const area = p.area.trim();
+  const city = p.city.trim();
+
+  if (college) {
+    const pre = matchPrebuilt(college);
+    out.push({
+      reason: `Because you studied at ${college}`,
+      community: pre ?? {
+        id: `c-${slugify(college)}-alumni`,
+        name: `${college} Alumni`,
+        type: "alumni",
+        verified: true,
+        description: `Alumni of ${college}. Membership verified privately.`,
+      },
+    });
+  }
+  if (employer) {
+    const pre = matchPrebuilt(employer);
+    out.push({
+      reason: `Because you work at ${employer}`,
+      community: pre ?? {
+        id: `c-${slugify(employer)}`,
+        name: `${employer} Community`,
+        type: "workplace",
+        verified: true,
+        description: `Current and former ${employer} employees. Verified via work email.`,
+      },
+    });
+  }
+  if (area) {
+    out.push({
+      reason: `Because you live in ${area}`,
+      community: {
+        id: `c-${slugify(area)}-residents`,
+        name: `${area} Residents`,
+        type: "local",
+        verified: true,
+        description: `People living in and around ${area}${city ? `, ${city}` : ""}. Verified via address or society code.`,
+      },
+    });
+  }
+  if (city) {
+    out.push({
+      reason: `Because you live in ${city}`,
+      community: {
+        id: `c-${slugify(city)}-locals`,
+        name: `${city} Locals`,
+        type: "local",
+        verified: true,
+        description: `Residents of ${city}. Verified via address.`,
+      },
+    });
+  }
+  // de-dupe by id
+  const seen = new Set<string>();
+  return out.filter(({ community }) => (seen.has(community.id) ? false : (seen.add(community.id), true)));
 }
 
 export function CircleProvider({ children }: { children: ReactNode }) {
@@ -162,15 +228,33 @@ export function CircleProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const joinCommunity = useCallback((id: string) => {
-    setState((s) => ({
-      ...s,
-      memberships: s.memberships.some((m) => m.communityId === id)
-        ? s.memberships
-        : [...s.memberships, { communityId: id, status: "pending", method: null, joinedAt: today() }],
-      selectedCommunityIds: s.selectedCommunityIds.includes(id)
-        ? s.selectedCommunityIds
-        : [...s.selectedCommunityIds, id],
-    }));
+    setState((s) => {
+      if (s.memberships.some((m) => m.communityId === id)) return s;
+      const community = [...COMMUNITIES, ...s.customCommunities].find((c) => c.id === id);
+      // Instant verification when a work/college email domain matches the organisation.
+      let verifiedNow = false;
+      if (community && s.profile) {
+        const org = community.name.replace(/ (Community|Alumni)$/i, "");
+        if (community.type === "workplace")
+          verifiedNow = emailDomainMatches(s.profile.workEmail || s.profile.email, org);
+        if (community.type === "alumni") verifiedNow = emailDomainMatches(s.profile.email, org);
+      }
+      return {
+        ...s,
+        memberships: [
+          ...s.memberships,
+          {
+            communityId: id,
+            status: verifiedNow ? "verified" : "pending",
+            method: verifiedNow ? "email-domain" : null,
+            joinedAt: today(),
+          },
+        ],
+        selectedCommunityIds: s.selectedCommunityIds.includes(id)
+          ? s.selectedCommunityIds
+          : [...s.selectedCommunityIds, id],
+      };
+    });
   }, []);
 
   const leaveCommunity = useCallback((id: string) => {
@@ -204,71 +288,19 @@ export function CircleProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  /**
+   * Save the private profile and make the derived communities *available*.
+   * Joining is a separate, explicit step on the "Your circles" screen.
+   */
   const saveProfile = useCallback((p: Omit<UserProfile, "updatedAt">) => {
-    const added: Community[] = [];
     setState((s) => {
+      const profile: UserProfile = { ...p, updatedAt: today() };
       const custom = [...s.customCommunities];
-      const memberships = [...s.memberships];
-      const selected = [...s.selectedCommunityIds];
-
-      const ensure = (community: Community, verifiedNow: boolean, method: VerificationMethod) => {
-        const all = [...COMMUNITIES, ...custom];
-        if (!all.some((c) => c.id === community.id)) {
-          custom.push(community);
-          added.push(community);
-        }
-        const existing = memberships.find((m) => m.communityId === community.id);
-        if (!existing) {
-          memberships.push({
-            communityId: community.id,
-            status: verifiedNow ? "verified" : "pending",
-            method: verifiedNow ? method : null,
-            joinedAt: today(),
-          });
-          added.push(community);
-        } else if (existing.status !== "verified" && verifiedNow) {
-          existing.status = "verified";
-          existing.method = method;
-        }
-        if (!selected.includes(community.id)) selected.push(community.id);
-      };
-
-      // College -> alumni community
-      if (p.college.trim()) {
-        const pre = matchPrebuilt(p.college);
-        const community: Community = pre ?? {
-          id: `c-${slugify(p.college)}-alumni`,
-          name: `${p.college.trim()} Alumni`,
-          type: "alumni",
-          verified: true,
-          description: `Alumni of ${p.college.trim()}. Membership verified privately.`,
-        };
-        ensure(community, emailDomainMatches(p.email, p.college), "email-domain");
+      for (const { community } of deriveCommunities(profile)) {
+        if (![...COMMUNITIES, ...custom].some((c) => c.id === community.id)) custom.push(community);
       }
-
-      // Employer -> workplace community
-      if (p.employer.trim()) {
-        const pre = matchPrebuilt(p.employer);
-        const community: Community = pre ?? {
-          id: `c-${slugify(p.employer)}`,
-          name: `${p.employer.trim()} Community`,
-          type: "workplace",
-          verified: true,
-          description: `Current and former ${p.employer.trim()} employees. Verified via work email.`,
-        };
-        const workEmail = p.workEmail || p.email;
-        ensure(community, emailDomainMatches(workEmail, p.employer), "email-domain");
-      }
-
-      return {
-        ...s,
-        profile: { ...p, updatedAt: today() },
-        customCommunities: custom,
-        memberships,
-        selectedCommunityIds: selected,
-      };
+      return { ...s, profile, customCommunities: custom };
     });
-    return { added };
   }, []);
 
   const addSubmittedReview = useCallback((r: Review) => {
@@ -284,6 +316,9 @@ export function CircleProvider({ children }: { children: ReactNode }) {
     const verifiedCommunityIds = state.memberships
       .filter((m) => m.status === "verified")
       .map((m) => m.communityId);
+    const suggestedCommunities = deriveCommunities(state.profile).filter(
+      ({ community }) => !memberIds.has(community.id),
+    );
     return {
       ...state,
       hydrated,
@@ -292,6 +327,7 @@ export function CircleProvider({ children }: { children: ReactNode }) {
       selectedCommunities: allCommunities.filter((c) => state.selectedCommunityIds.includes(c.id)),
       verifiedCommunityIds,
       membershipFor: (id) => state.memberships.find((m) => m.communityId === id),
+      suggestedCommunities,
       saveProfile,
       toggleCommunity,
       setSelected,
