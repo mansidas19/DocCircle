@@ -171,6 +171,23 @@ export function formatFee(fee: number) {
   return `₹${fee.toLocaleString("en-IN")}`;
 }
 
+/** Public-facing label for an anonymous reviewer's community. Never a name. */
+export function reviewerLabelFor(community: Community | undefined) {
+  if (!community) return "Verified visit";
+  switch (community.type) {
+    case "friends":
+      return "Friends circle";
+    case "family":
+      return "Family circle";
+    case "alumni":
+      return community.name.endsWith("Alumni") ? community.name : `${community.name} alumni`;
+    default:
+      return community.name.toLowerCase().endsWith("community")
+        ? community.name.replace(/Community$/, "community")
+        : `${community.name} community`;
+  }
+}
+
 export function slugify(s: string) {
   return s
     .toLowerCase()

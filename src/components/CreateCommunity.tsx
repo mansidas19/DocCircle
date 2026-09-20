@@ -8,7 +8,7 @@ import { slugify } from "@/lib/utils";
 
 const TYPES: Array<{ value: CommunityType; label: string }> = [
   { value: "alumni", label: "Alumni group" },
-  { value: "workplace", label: "Workplace" },
+  { value: "workplace", label: "Workplace / company" },
   { value: "local", label: "Local / residents" },
   { value: "friends", label: "Friends" },
   { value: "family", label: "Family" },
@@ -108,7 +108,7 @@ export default function CreateCommunity() {
             <p className="text-sm font-semibold text-slate-900">Create a community</p>
             <p className="text-xs text-slate-600">
               For groups that aren&apos;t pre-built: your apartment, batch, parents&apos; group, study
-              circle. Demo only, no verification step.
+              circle. You become the verified creator; members join with your invite code.
             </p>
           </div>
           <label className="block">

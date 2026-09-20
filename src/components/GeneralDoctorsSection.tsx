@@ -28,7 +28,7 @@ export default function GeneralDoctorsSection({ general, peerIds }: Props) {
         <div className="card flex items-center gap-3 border-dashed p-6">
           <Stethoscope className="h-5 w-5 text-slate-400" aria-hidden />
           <p className="text-sm text-slate-600">
-            No doctors match this search in our demo data yet. Try Bangalore, Bhopal, Mumbai, Delhi,
+            No doctors match this search yet. Try Bangalore, Bhopal, Mumbai, Delhi,
             Pune or Hyderabad.
           </p>
         </div>

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { HeartHandshake } from "lucide-react";
 import ReviewForm from "@/components/ReviewForm";
+import ContributorBenefits from "@/components/ContributorBenefits";
 
 export const metadata: Metadata = { title: "Share your experience — DocCircle" };
 
@@ -22,6 +23,10 @@ export default function ReviewPage() {
         <Suspense fallback={<div className="card h-96 animate-pulse bg-slate-100" />}>
           <ReviewForm />
         </Suspense>
+      </div>
+
+      <div className="mt-8">
+        <ContributorBenefits compact />
       </div>
     </div>
   );

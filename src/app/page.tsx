@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck, MessageSquareText, ShieldCheck, Sparkles, Users } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import CommunitySignal from "@/components/CommunitySignal";
+import ContributorBenefits from "@/components/ContributorBenefits";
 import { COMMUNITIES } from "@/lib/demo-data";
 
 const QUICK = [
@@ -163,12 +164,16 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto mt-12 max-w-6xl px-4 sm:px-6">
+        <ContributorBenefits />
+      </section>
+
+      <section className="mx-auto mt-12 max-w-6xl px-4 sm:px-6">
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600 sm:flex-row sm:items-center">
           <BadgeCheck className="h-5 w-5 shrink-0 text-brand-700" aria-hidden />
           <p>
             <span className="font-semibold text-slate-900">DocCircle provides community experience information, not medical advice.</span>{" "}
-            This is a prototype built on fictional demo data. No real doctors, clinics or patients
-            are represented.
+            Experience signals describe communication, fees and waiting as patients felt them,
+            never medical quality.
           </p>
         </div>
       </section>

@@ -1,19 +1,26 @@
 "use client";
 
-import { Check, ShieldCheck, Users } from "lucide-react";
+import Link from "next/link";
+import { BadgeCheck, Check, Clock, Users } from "lucide-react";
 import { useCircle } from "@/lib/circle-store";
 import { cn } from "@/lib/utils";
 
 /** Checkbox list of the user's communities. Selecting changes every peer signal in the app. */
 export default function CommunityPicker() {
-  const { allCommunities, selectedCommunityIds, toggleCommunity } = useCircle();
+  const { myCommunities, selectedCommunityIds, toggleCommunity, membershipFor } = useCircle();
 
   return (
     <fieldset>
-      <legend className="label">Your circles</legend>
+      <div className="mb-1.5 flex items-center justify-between">
+        <legend className="label mb-0">Your circles</legend>
+        <Link href="/profile" className="text-xs font-medium text-brand-800 hover:underline">
+          Manage & verify
+        </Link>
+      </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        {allCommunities.map((c) => {
+        {myCommunities.map((c) => {
           const checked = selectedCommunityIds.includes(c.id);
+          const verified = membershipFor(c.id)?.status === "verified";
           return (
             <label
               key={c.id}
@@ -39,15 +46,17 @@ export default function CommunityPicker() {
                 {checked && <Check className="h-3.5 w-3.5" />}
               </span>
               <span className="min-w-0">
-                <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                <span className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-slate-900">
                   <Users className="h-3.5 w-3.5 text-slate-500" aria-hidden />
                   {c.name}
-                  {c.verified ? (
+                  {verified ? (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-700">
-                      <ShieldCheck className="h-3 w-3" aria-hidden /> verified
+                      <BadgeCheck className="h-3 w-3" aria-hidden /> verified
                     </span>
                   ) : (
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">custom</span>
+                    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide text-peer-700">
+                      <Clock className="h-3 w-3" aria-hidden /> pending
+                    </span>
                   )}
                 </span>
                 <span id={`${c.id}-desc`} className="mt-0.5 block text-xs text-slate-600">

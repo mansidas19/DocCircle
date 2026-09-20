@@ -22,11 +22,11 @@ export const COMMUNITIES: Community[] = [
     description: "Alumni of the National Institutes of Technology. Membership verified privately.",
   },
   {
-    id: "c-work",
-    name: "Workplace",
+    id: "c-microsoft",
+    name: "Microsoft Community",
     type: "workplace",
     verified: true,
-    description: "Colleagues from your current workplace. Verified via work identity.",
+    description: "Current and former Microsoft employees. Verified via work email.",
   },
   {
     id: "c-friends",
@@ -45,9 +45,11 @@ export const COMMUNITIES: Community[] = [
 ];
 
 /** Communities the demo user is pre-verified into. */
-export const DEFAULT_USER_COMMUNITY_IDS = ["c-nit", "c-work"];
+export const DEFAULT_USER_COMMUNITY_IDS = ["c-nit", "c-microsoft"];
 
-export const DOCTORS: Doctor[] = [
+type DoctorBase = Omit<Doctor, "qualifications" | "specializations">;
+
+const DOCTOR_BASE: DoctorBase[] = [
   {
     id: "meera-sharma",
     name: "Dr. Meera Sharma",
@@ -290,14 +292,67 @@ export const DOCTORS: Doctor[] = [
   },
 ];
 
+/** Qualifications and areas of focus, shown on the doctor profile. */
+const DOCTOR_DETAILS: Record<string, Pick<Doctor, "qualifications" | "specializations">> = {
+  "meera-sharma": {
+    qualifications: "MBBS, MD (Dermatology, Venereology & Leprosy)",
+    specializations: ["Acne & scarring", "Pigmentation", "Hair loss", "Cosmetic dermatology"],
+  },
+  "rohan-mehta": {
+    qualifications: "MBBS, DDVL",
+    specializations: ["General dermatology", "Eczema & allergies", "Laser procedures"],
+  },
+  "ananya-iyer": {
+    qualifications: "MBBS, MD (Dermatology)",
+    specializations: ["Pediatric dermatology", "Psoriasis", "Skin allergies"],
+  },
+  "kavita-rao": {
+    qualifications: "MBBS, MS (Orthopaedics), Fellowship in Joint Replacement",
+    specializations: ["Knee & hip replacement", "Sports injuries", "Arthritis care"],
+  },
+  "arjun-verma": {
+    qualifications: "MBBS, MS (Orthopaedics)",
+    specializations: ["Fracture care", "Spine", "Sports injuries"],
+  },
+  "sunita-patel": {
+    qualifications: "MBBS, MD (Obstetrics & Gynaecology)",
+    specializations: ["High-risk pregnancy", "PCOS", "Menopause care", "Laparoscopic surgery"],
+  },
+  "vikram-nair": {
+    qualifications: "MBBS, MD (Medicine), DM (Cardiology)",
+    specializations: ["Preventive cardiology", "Hypertension", "Echocardiography"],
+  },
+  "priya-desai": {
+    qualifications: "BDS, MDS (Conservative Dentistry)",
+    specializations: ["Root canal", "Cosmetic dentistry", "Teeth whitening"],
+  },
+  "farhan-qureshi": {
+    qualifications: "MBBS, MS (ENT)",
+    specializations: ["Sinus & allergy", "Hearing", "Pediatric ENT"],
+  },
+  "neha-kulkarni": {
+    qualifications: "MBBS, MD (General Medicine)",
+    specializations: ["Family medicine", "Diabetes & thyroid", "Preventive health"],
+  },
+  "sameer-joshi": {
+    qualifications: "BDS, MDS (Orthodontics)",
+    specializations: ["Braces & aligners", "Dental implants", "Preventive dentistry"],
+  },
+};
+
+export const DOCTORS: Doctor[] = DOCTOR_BASE.map((d) => ({
+  ...d,
+  ...(DOCTOR_DETAILS[d.id] ?? { qualifications: "", specializations: [] }),
+}));
+
 // Helper to keep the review list readable.
 type R = Omit<Review, "id" | "safeToPublish" | "reviewerDisplayLabel"> & {
   reviewerDisplayLabel?: string;
 };
 let seq = 1;
-export const COMMUNITY_REVIEWER_LABEL: Record<string, string> = {
+const COMMUNITY_REVIEWER_LABEL: Record<string, string> = {
   "c-nit": "NIT Alumni",
-  "c-work": "Workplace community",
+  "c-microsoft": "Microsoft community",
   "c-friends": "Friends circle",
   "c-family": "Family circle",
 };
@@ -320,8 +375,8 @@ export const REVIEWS: Review[] = [
   r({ doctorId: "meera-sharma", communityId: "c-nit", listening: "somewhat", explanation: "yes", feesClear: false, waitTime: "30-60", wouldRecommend: "maybe", writtenExperience: "Good doctor but the clinic was crowded and the wait was long. Fees were higher than I expected.", aiThemes: ["Waiting time", "Fee clarity"], aiSummary: "Positive on the doctor; concerns about wait and fee clarity.", createdAt: "2026-05-18" }),
   r({ doctorId: "meera-sharma", communityId: "c-nit", listening: "yes", explanation: "yes", feesClear: true, waitTime: "<15", wouldRecommend: "yes", writtenExperience: "Got an early slot and was seen almost immediately. Clear, practical advice on what to expect.", aiThemes: ["Short waiting time", "Clear communication"], aiSummary: "Quick appointment with clear, practical communication.", createdAt: "2026-04-22" }),
   r({ doctorId: "meera-sharma", communityId: "c-nit", listening: "yes", explanation: "yes", feesClear: true, waitTime: "15-30", wouldRecommend: "yes", writtenExperience: "Calm and reassuring. Did not push unnecessary procedures.", aiThemes: ["Reassuring manner", "No upselling"], aiSummary: "Reassuring, no pressure for extra procedures.", createdAt: "2026-03-09" }),
-  r({ doctorId: "meera-sharma", communityId: "c-work", listening: "yes", explanation: "yes", feesClear: true, waitTime: "15-30", wouldRecommend: "yes", writtenExperience: "A colleague recommended her and I see why. Explained things in plain language.", aiThemes: ["Clear communication"], aiSummary: "Plain-language explanations.", createdAt: "2026-07-01" }),
-  r({ doctorId: "meera-sharma", communityId: "c-work", listening: "yes", explanation: "somewhat", feesClear: true, waitTime: "30-60", wouldRecommend: "yes", writtenExperience: "Attentive, though I had to ask a couple of follow-up questions to fully understand. Long wait.", aiThemes: ["Attentive", "Waiting time"], aiSummary: "Attentive consultation; long wait noted.", createdAt: "2026-05-05" }),
+  r({ doctorId: "meera-sharma", communityId: "c-microsoft", listening: "yes", explanation: "yes", feesClear: true, waitTime: "15-30", wouldRecommend: "yes", writtenExperience: "A colleague recommended her and I see why. Explained things in plain language.", aiThemes: ["Clear communication"], aiSummary: "Plain-language explanations.", createdAt: "2026-07-01" }),
+  r({ doctorId: "meera-sharma", communityId: "c-microsoft", listening: "yes", explanation: "somewhat", feesClear: true, waitTime: "30-60", wouldRecommend: "yes", writtenExperience: "Attentive, though I had to ask a couple of follow-up questions to fully understand. Long wait.", aiThemes: ["Attentive", "Waiting time"], aiSummary: "Attentive consultation; long wait noted.", createdAt: "2026-05-05" }),
   r({ doctorId: "meera-sharma", communityId: null, listening: "yes", explanation: "yes", feesClear: true, waitTime: "15-30", wouldRecommend: "yes", writtenExperience: "Professional and kind. The clinic is easy to find.", aiThemes: ["Professional", "Convenient location"], aiSummary: "Professional manner, convenient location.", createdAt: "2026-02-11" }),
   r({ doctorId: "meera-sharma", communityId: null, listening: "yes", explanation: "yes", feesClear: false, waitTime: "30-60", wouldRecommend: "yes", writtenExperience: "Good experience overall. Would have liked the fee explained before the visit.", aiThemes: ["Fee clarity"], aiSummary: "Good overall; fee not explained in advance.", createdAt: "2026-01-20" }),
 
@@ -338,9 +393,9 @@ export const REVIEWS: Review[] = [
   r({ doctorId: "ananya-iyer", communityId: null, listening: "yes", explanation: "somewhat", feesClear: false, waitTime: "30-60", wouldRecommend: "maybe", writtenExperience: "Kind doctor, but the wait was long and fee was unclear.", aiThemes: ["Waiting time", "Fee clarity"], aiSummary: "Kind; wait and fee concerns.", createdAt: "2026-04-01" }),
 
   // ---------- Dr. Kavita Rao: 3 Workplace (2 rec), 2 general ----------
-  r({ doctorId: "kavita-rao", communityId: "c-work", listening: "yes", explanation: "yes", feesClear: true, waitTime: ">60", wouldRecommend: "yes", writtenExperience: "Walked me through the scan images and options carefully. Wait was over an hour on a weekday evening.", aiThemes: ["Thorough explanations", "Waiting time"], aiSummary: "Thorough explanations; very long evening wait.", createdAt: "2026-07-12" }),
-  r({ doctorId: "kavita-rao", communityId: "c-work", listening: "yes", explanation: "yes", feesClear: true, waitTime: "30-60", wouldRecommend: "yes", writtenExperience: "Clear about costs before anything was done. Explained the plan step by step.", aiThemes: ["Transparent fees", "Clear communication"], aiSummary: "Transparent fees, step-by-step explanation.", createdAt: "2026-06-08" }),
-  r({ doctorId: "kavita-rao", communityId: "c-work", listening: "somewhat", explanation: "yes", feesClear: true, waitTime: ">60", wouldRecommend: "maybe", writtenExperience: "Competent and clear but the wait was exhausting.", aiThemes: ["Waiting time"], aiSummary: "Clear communication; exhausting wait.", createdAt: "2026-04-15" }),
+  r({ doctorId: "kavita-rao", communityId: "c-microsoft", listening: "yes", explanation: "yes", feesClear: true, waitTime: ">60", wouldRecommend: "yes", writtenExperience: "Walked me through the scan images and options carefully. Wait was over an hour on a weekday evening.", aiThemes: ["Thorough explanations", "Waiting time"], aiSummary: "Thorough explanations; very long evening wait.", createdAt: "2026-07-12" }),
+  r({ doctorId: "kavita-rao", communityId: "c-microsoft", listening: "yes", explanation: "yes", feesClear: true, waitTime: "30-60", wouldRecommend: "yes", writtenExperience: "Clear about costs before anything was done. Explained the plan step by step.", aiThemes: ["Transparent fees", "Clear communication"], aiSummary: "Transparent fees, step-by-step explanation.", createdAt: "2026-06-08" }),
+  r({ doctorId: "kavita-rao", communityId: "c-microsoft", listening: "somewhat", explanation: "yes", feesClear: true, waitTime: ">60", wouldRecommend: "maybe", writtenExperience: "Competent and clear but the wait was exhausting.", aiThemes: ["Waiting time"], aiSummary: "Clear communication; exhausting wait.", createdAt: "2026-04-15" }),
   r({ doctorId: "kavita-rao", communityId: null, listening: "yes", explanation: "yes", feesClear: true, waitTime: "30-60", wouldRecommend: "yes", writtenExperience: "Explained everything in simple terms.", aiThemes: ["Clear communication"], aiSummary: "Simple, clear explanations.", createdAt: "2026-03-03" }),
   r({ doctorId: "kavita-rao", communityId: null, listening: "yes", explanation: "yes", feesClear: true, waitTime: "15-30", wouldRecommend: "yes", writtenExperience: "Morning slot meant a short wait. Very professional.", aiThemes: ["Professional", "Short waiting time"], aiSummary: "Professional, short morning wait.", createdAt: "2026-01-30" }),
 
@@ -363,8 +418,8 @@ export const REVIEWS: Review[] = [
   r({ doctorId: "vikram-nair", communityId: null, listening: "no", explanation: "somewhat", feesClear: true, waitTime: "30-60", wouldRecommend: "no", writtenExperience: "Felt like a very quick visit for the fee.", aiThemes: ["Brief consultation"], aiSummary: "Brief visit relative to fee.", createdAt: "2026-02-14" }),
 
   // ---------- Dr. Priya Desai (Pune): 2 Workplace (1 rec), 1 general ----------
-  r({ doctorId: "priya-desai", communityId: "c-work", listening: "yes", explanation: "yes", feesClear: false, waitTime: "<15", wouldRecommend: "yes", writtenExperience: "Friendly, no wait. Some add-on charges were a surprise.", aiThemes: ["Short waits", "Friendly", "Add-on costs"], aiSummary: "Friendly, quick; surprise add-on costs.", createdAt: "2026-06-11" }),
-  r({ doctorId: "priya-desai", communityId: "c-work", listening: "somewhat", explanation: "somewhat", feesClear: false, waitTime: "<15", wouldRecommend: "maybe", writtenExperience: "Quick appointment but the final bill was more than quoted.", aiThemes: ["Add-on costs"], aiSummary: "Bill exceeded quote.", createdAt: "2026-04-05" }),
+  r({ doctorId: "priya-desai", communityId: "c-microsoft", listening: "yes", explanation: "yes", feesClear: false, waitTime: "<15", wouldRecommend: "yes", writtenExperience: "Friendly, no wait. Some add-on charges were a surprise.", aiThemes: ["Short waits", "Friendly", "Add-on costs"], aiSummary: "Friendly, quick; surprise add-on costs.", createdAt: "2026-06-11" }),
+  r({ doctorId: "priya-desai", communityId: "c-microsoft", listening: "somewhat", explanation: "somewhat", feesClear: false, waitTime: "<15", wouldRecommend: "maybe", writtenExperience: "Quick appointment but the final bill was more than quoted.", aiThemes: ["Add-on costs"], aiSummary: "Bill exceeded quote.", createdAt: "2026-04-05" }),
   r({ doctorId: "priya-desai", communityId: null, listening: "yes", explanation: "yes", feesClear: true, waitTime: "<15", wouldRecommend: "yes", writtenExperience: "Gentle and efficient.", aiThemes: ["Gentle manner", "Short waits"], aiSummary: "Gentle, efficient.", createdAt: "2026-01-27" }),
 
   // ---------- Dr. Farhan Qureshi (Hyderabad): general only ----------

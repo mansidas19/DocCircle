@@ -32,7 +32,7 @@ export default function SearchResults() {
       <p className="eyebrow">Search results</p>
       <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{heading}</h1>
       <p className="mt-2 text-sm text-slate-600">
-        {general.length} doctor{general.length === 1 ? "" : "s"} found · Prototype — demo data
+        {general.length} doctor{general.length === 1 ? "" : "s"} found
       </p>
 
       <div className="mt-6">

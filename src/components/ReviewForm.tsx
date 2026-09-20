@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import { AlertTriangle, Check, CheckCircle2, Loader2, ShieldCheck, Sparkles, XCircle } from "lucide-react";
-import { COMMUNITY_REVIEWER_LABEL, DOCTORS, SPECIALTIES } from "@/lib/demo-data";
+import { DOCTORS, SPECIALTIES } from "@/lib/demo-data";
 import { useCircle } from "@/lib/circle-store";
 import type { ModerationResponse, RecommendAnswer, Review, Sentiment, ThreeScale, WaitBucket } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, reviewerLabelFor } from "@/lib/utils";
 
 type Step = "form" | "submitting" | "flagged" | "done" | "error";
 
@@ -69,7 +69,9 @@ function Segmented<T extends string>({
 
 export default function ReviewForm() {
   const params = useSearchParams();
-  const { allCommunities, addSubmittedReview } = useCircle();
+  const { myCommunities, verifiedCommunityIds, membershipFor, addSubmittedReview } = useCircle();
+  const postable = myCommunities.filter((c) => verifiedCommunityIds.includes(c.id));
+  const pendingOnes = myCommunities.filter((c) => membershipFor(c.id)?.status !== "verified");
 
   const [doctorId, setDoctorId] = useState(params.get("doctorId") ?? "");
   const [listening, setListening] = useState<ThreeScale | "">("");
@@ -111,15 +113,12 @@ export default function ReviewForm() {
         return;
       }
 
-      const community = allCommunities.find((c) => c.id === communityId);
+      const community = postable.find((c) => c.id === communityId);
       const review: Review = {
-        id: `rv-local-${Date.now()}`,
+        id: `rv-local-${crypto.randomUUID()}`,
         doctorId,
-        communityId: communityId === "none" ? null : communityId,
-        reviewerDisplayLabel:
-          communityId === "none"
-            ? "Verified visit"
-            : COMMUNITY_REVIEWER_LABEL[communityId] ?? `${community?.name ?? "Community"} member`,
+        communityId: community ? community.id : null,
+        reviewerDisplayLabel: reviewerLabelFor(community),
         listening,
         explanation,
         feesClear: feesClear === "yes",
@@ -329,13 +328,22 @@ export default function ReviewForm() {
       <div>
         <label htmlFor="community" className="label">Post as a member of</label>
         <select id="community" value={communityId} onChange={(e) => setCommunityId(e.target.value)} className="input">
-          {allCommunities.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}{c.verified ? " (verified)" : ""}</option>
+          {postable.map((c) => (
+            <option key={c.id} value={c.id}>{c.name} (verified)</option>
           ))}
           <option value="none">Prefer not to say</option>
         </select>
         <p className="mt-1.5 text-xs text-slate-500">
-          Shown publicly as &ldquo;Anonymous reviewer · {communityId === "none" ? "Verified visit" : COMMUNITY_REVIEWER_LABEL[communityId] ?? allCommunities.find((c) => c.id === communityId)?.name}&rdquo;. Your name is never displayed.
+          Shown publicly as &ldquo;Anonymous reviewer · {reviewerLabelFor(postable.find((c) => c.id === communityId))}&rdquo;. Your name is never displayed.
+          {pendingOnes.length > 0 && (
+            <>
+              {" "}
+              <Link href="/profile" className="font-medium text-brand-800 hover:underline">
+                Verify {pendingOnes.map((c) => c.name).join(", ")}
+              </Link>{" "}
+              to post under {pendingOnes.length === 1 ? "it" : "them"} too.
+            </>
+          )}
         </p>
       </div>
 

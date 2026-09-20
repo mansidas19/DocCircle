@@ -28,10 +28,6 @@ export default function Footer() {
             signals describe how patients felt about communication, fees and waiting, never medical
             quality.
           </p>
-          <p className="mt-2">
-            <span className="rounded bg-peer-50 px-1.5 py-0.5 font-semibold text-peer-800">Prototype — demo data.</span>{" "}
-            All doctors, clinics and reviews are fictional.
-          </p>
         </div>
       </div>
     </footer>

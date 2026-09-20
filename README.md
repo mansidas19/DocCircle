@@ -2,7 +2,7 @@
 
 **Find doctors through people you trust.**
 
-DocCircle is a doctor-discovery prototype with a peer-trust layer. Think "Zomato for doctors", but instead of relying only on anonymous star ratings it shows whether people from communities you belong to (alumni network, workplace, friends, family) have visited a doctor and would recommend them.
+DocCircle is a doctor-discovery prototype with a peer-trust layer. Think "Zomato for doctors", but instead of relying only on anonymous star ratings it shows whether people from communities you belong to (alumni network, your company, friends, family) have visited a doctor and would recommend them.
 
 > Prototype — demo data. All doctors, clinics and reviews are fictional. DocCircle provides community experience information, not medical advice.
 
@@ -26,6 +26,7 @@ Anonymous detailed experiences + AI experience summary
 
 - **Search** by specialty + city with two segments: *Peer Reviewed for You* (first) and *All Doctors*. The empty peer state keeps the product useful when a circle has no reviews yet.
 - **Doctor profile**: provider info, peer-trust block with per-community breakdown, experience breakdown (communication, listening, fees, waiting), cached AI summary, anonymous detailed reviews.
+- **Profile & circles** (`/profile`): private details (college, employer, work email) derive your communities; verify membership via email code, document review or invite code, or create your own peer group.
 - **Ask My Circle**: toggle communities and watch every signal in the app change. Includes a lightweight *Create a Community* flow with a mock invite link.
 - **Share your experience**: a sub-60-second structured form plus optional written experience.
 - **Fable moderation**: the written text is sent to a server-side API route which returns strict JSON (medical claims, personal info, abuse, promo and spam flags; per-dimension sentiment; experience themes; a safe public summary). Flagged reviews get friendly guidance instead of being published.
@@ -69,10 +70,10 @@ src/app
 src/components                   UI
 src/lib
   types.ts        data model (DB-ready shape)
-  demo-data.ts    11 doctors, 4 communities, 43 reviews (fictional)
+  demo-data.ts    11 doctors, 4 communities, 43 reviews
   utils.ts        signal aggregation + segmentation
   moderation.ts   prompt, output schema, mock fallback
-  circle-store.tsx client session state (selected circles, custom communities, submitted reviews)
+  circle-store.tsx client session state (private profile, memberships & verification, custom communities, submitted reviews)
 ```
 
 Built with Next.js (App Router), TypeScript, Tailwind CSS, lucide-react and the Anthropic TypeScript SDK.

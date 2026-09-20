@@ -17,7 +17,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">
+      {/* suppressHydrationWarning: browser extensions (e.g. Grammarly) inject attributes on <body> */}
+      <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <CircleProvider>
           <Header />
           <main className="flex-1">{children}</main>

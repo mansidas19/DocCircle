@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, PenLine, Search, Menu, X } from "lucide-react";
+import { Users, PenLine, Search, Menu, X, UserRound } from "lucide-react";
 import { useState } from "react";
 import { useCircle } from "@/lib/circle-store";
 import { cn } from "@/lib/utils";
@@ -16,8 +16,12 @@ const NAV = [
 
 export default function Header() {
   const pathname = usePathname();
-  const { selectedCommunities, hydrated } = useCircle();
+  const { profile, verifiedCommunityIds, hydrated } = useCircle();
   const [open, setOpen] = useState(false);
+
+  const initials = profile?.name
+    ? profile.name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("")
+    : null;
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur">
@@ -25,9 +29,6 @@ export default function Header() {
         <Link href="/" className="flex items-center gap-2.5" aria-label="DocCircle home">
           <Logo />
           <span className="text-lg font-bold tracking-tight text-slate-900">DocCircle</span>
-          <span className="hidden rounded-full border border-peer-200 bg-peer-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-peer-800 sm:inline">
-            Prototype · demo data
-          </span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
@@ -50,12 +51,21 @@ export default function Header() {
             );
           })}
           <Link
-            href="/circle"
-            className="ml-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-brand-300"
-            title="Your circles"
+            href="/profile"
+            className={cn(
+              "ml-2 inline-flex items-center gap-2 rounded-full border bg-white py-1 pl-1 pr-3 text-xs font-medium transition hover:border-brand-300",
+              pathname.startsWith("/profile") ? "border-brand-300 text-brand-800" : "border-slate-200 text-slate-700",
+            )}
+            title="Your profile and circles"
           >
-            <span className="h-2 w-2 rounded-full bg-brand-500" aria-hidden />
-            {hydrated ? `${selectedCommunities.length} circle${selectedCommunities.length === 1 ? "" : "s"}` : "Circles"}
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-700 text-[11px] font-bold text-white">
+              {initials ?? <UserRound className="h-3.5 w-3.5" aria-hidden />}
+            </span>
+            {hydrated
+              ? profile
+                ? `${verifiedCommunityIds.length} verified circle${verifiedCommunityIds.length === 1 ? "" : "s"}`
+                : "Set up profile"
+              : "Profile"}
           </Link>
         </nav>
 
@@ -72,12 +82,8 @@ export default function Header() {
       </div>
 
       {open && (
-        <nav
-          id="mobile-nav"
-          className="border-t border-slate-200 bg-white px-4 py-3 md:hidden"
-          aria-label="Mobile"
-        >
-          {NAV.map(({ href, label, icon: Icon }) => (
+        <nav id="mobile-nav" className="border-t border-slate-200 bg-white px-4 py-3 md:hidden" aria-label="Mobile">
+          {[...NAV, { href: "/profile", label: "My profile & circles", icon: UserRound }].map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}

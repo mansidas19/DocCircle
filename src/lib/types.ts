@@ -58,6 +58,10 @@ export interface Doctor {
   consultationFee: number;
   yearsExperience: number;
   languages: string[];
+  /** e.g. "MBBS, MD (Dermatology)" */
+  qualifications: string;
+  /** Areas of focus within the specialty, e.g. "Acne & scarring" */
+  specializations: string[];
   demoVerified: boolean;
   /** Pre-generated (cached) AI summary. Never regenerated at page load. */
   insights: DoctorInsights;
@@ -112,6 +116,37 @@ export interface ModerationResponse {
   /** "fable" when a live model call was made, "mock" for the deterministic fallback */
   mode: "fable" | "mock";
   model?: string;
+}
+
+/** Private user profile. Never rendered publicly; used only to derive communities. */
+export interface UserProfile {
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  college: string;
+  graduationYear: string;
+  employer: string;
+  workEmail: string;
+  updatedAt: string;
+}
+
+export type MembershipStatus = "verified" | "pending" | "unverified";
+export type VerificationMethod =
+  | "seeded"
+  | "email-domain"
+  | "email-otp"
+  | "document"
+  | "invite-code"
+  | "creator"
+  | "personal";
+
+/** User -> Community link. Verified privately; only the community label is ever public. */
+export interface Membership {
+  communityId: string;
+  status: MembershipStatus;
+  method: VerificationMethod | null;
+  joinedAt: string;
 }
 
 /** Aggregated, anonymous signal for one community on one doctor. */
