@@ -7,6 +7,7 @@ import { filterDoctors, getSpecialty, normalizeCity, segmentDoctors } from "@/li
 import SearchBar from "./SearchBar";
 import PeerReviewedSection from "./PeerReviewedSection";
 import GeneralDoctorsSection from "./GeneralDoctorsSection";
+import RequireProfile from "./RequireProfile";
 
 export default function SearchResults() {
   const params = useSearchParams();
@@ -28,6 +29,7 @@ export default function SearchResults() {
     .join(" ");
 
   return (
+    <RequireProfile feature="search">
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <p className="eyebrow">Search results</p>
       <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{heading}</h1>
@@ -50,6 +52,7 @@ export default function SearchResults() {
         )}
       </div>
     </div>
+    </RequireProfile>
   );
 }
 

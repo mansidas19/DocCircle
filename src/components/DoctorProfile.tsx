@@ -10,8 +10,18 @@ import { computeSignals, formatFee, getReviewsForDoctor } from "@/lib/utils";
 import TrustSignal from "./TrustSignal";
 import ReviewInsights from "./ReviewInsights";
 import ReviewCard from "./ReviewCard";
+import BookAppointment from "./BookAppointment";
+import RequireProfile from "./RequireProfile";
 
-export default function DoctorProfile({ doctor }: { doctor: Doctor }) {
+export default function DoctorProfile({
+  doctor,
+  openBooking = false,
+  bookingReason = "",
+}: {
+  doctor: Doctor;
+  openBooking?: boolean;
+  bookingReason?: string;
+}) {
   const { selectedCommunityIds, submittedReviews, customCommunities } = useCircle();
   const specialty = SPECIALTIES.find((s) => s.key === doctor.specialty);
 
@@ -23,6 +33,7 @@ export default function DoctorProfile({ doctor }: { doctor: Doctor }) {
   const mineIds = new Set(submittedReviews.map((r) => r.id));
 
   return (
+    <RequireProfile feature="doctor profiles">
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <nav aria-label="Breadcrumb" className="text-sm text-slate-500">
         <Link href="/doctors" className="hover:text-brand-800">Doctors</Link>
@@ -55,11 +66,16 @@ export default function DoctorProfile({ doctor }: { doctor: Doctor }) {
             </p>
           </div>
         </div>
-        <Link href={`/review?doctorId=${doctor.id}`} className="btn-primary self-start">
-          <PenLine className="h-4 w-4" aria-hidden />
-          Share your experience
-        </Link>
+        <div className="flex flex-wrap gap-2 self-start">
+          {!openBooking && <BookAppointment doctor={doctor} />}
+          <Link href={`/review?doctorId=${doctor.id}`} className="btn-primary">
+            <PenLine className="h-4 w-4" aria-hidden />
+            Share your experience
+          </Link>
+        </div>
       </header>
+
+      {openBooking && <BookAppointment doctor={doctor} initialOpen initialReason={bookingReason} />}
 
       {/* Provider info */}
       <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" aria-label="Provider information">
@@ -138,5 +154,6 @@ export default function DoctorProfile({ doctor }: { doctor: Doctor }) {
         </section>
       </div>
     </div>
+    </RequireProfile>
   );
 }

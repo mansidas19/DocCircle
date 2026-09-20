@@ -11,6 +11,7 @@ import {
 } from "react";
 import { COMMUNITIES } from "./demo-data";
 import type {
+  Appointment,
   Community,
   Membership,
   Review,
@@ -36,9 +37,16 @@ interface CircleState {
   /** Communities currently used for Ask My Circle / peer signals */
   selectedCommunityIds: string[];
   submittedReviews: Review[];
+  appointments: Appointment[];
 }
 
 interface CircleContextValue extends CircleState {
+  /** true once the user has completed step 1 of onboarding */
+  hasProfile: boolean;
+  /** Contributors (anyone who has shared an experience) unlock priority slots */
+  isContributor: boolean;
+  addAppointment: (a: Omit<Appointment, "id" | "reference" | "createdAt">) => Appointment;
+  cancelAppointment: (id: string) => void;
   hydrated: boolean;
   allCommunities: Community[];
   /** Communities the user belongs to (any status) */
@@ -77,6 +85,7 @@ const initial: CircleState = {
   customCommunities: [],
   selectedCommunityIds: ["c-nit", "c-microsoft"],
   submittedReviews: [],
+  appointments: [],
 };
 
 const CircleContext = createContext<CircleContextValue | null>(null);
@@ -178,6 +187,7 @@ export function CircleProvider({ children }: { children: ReactNode }) {
             customCommunities: parsed.customCommunities ?? [],
             selectedCommunityIds: parsed.selectedCommunityIds ?? initial.selectedCommunityIds,
             submittedReviews: parsed.submittedReviews ?? [],
+            appointments: parsed.appointments ?? [],
           });
         }
       } catch {
@@ -307,6 +317,22 @@ export function CircleProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, submittedReviews: [r, ...s.submittedReviews] }));
   }, []);
 
+  const addAppointment = useCallback((a: Omit<Appointment, "id" | "reference" | "createdAt">) => {
+    const id = crypto.randomUUID();
+    const appointment: Appointment = {
+      ...a,
+      id,
+      reference: `DC-${id.replace(/-/g, "").slice(0, 4).toUpperCase()}`,
+      createdAt: today(),
+    };
+    setState((s) => ({ ...s, appointments: [appointment, ...s.appointments] }));
+    return appointment;
+  }, []);
+
+  const cancelAppointment = useCallback((id: string) => {
+    setState((s) => ({ ...s, appointments: s.appointments.filter((a) => a.id !== id) }));
+  }, []);
+
   const reset = useCallback(() => setState(initial), []);
 
   const value = useMemo<CircleContextValue>(() => {
@@ -322,6 +348,10 @@ export function CircleProvider({ children }: { children: ReactNode }) {
     return {
       ...state,
       hydrated,
+      hasProfile: !!state.profile,
+      isContributor: state.submittedReviews.length > 0,
+      addAppointment,
+      cancelAppointment,
       allCommunities,
       myCommunities,
       selectedCommunities: allCommunities.filter((c) => state.selectedCommunityIds.includes(c.id)),
@@ -351,6 +381,8 @@ export function CircleProvider({ children }: { children: ReactNode }) {
     requestVerification,
     approvePending,
     addSubmittedReview,
+    addAppointment,
+    cancelAppointment,
     reset,
   ]);
 

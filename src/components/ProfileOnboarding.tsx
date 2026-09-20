@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Check, Pencil, ShieldCheck } from "lucide-react";
+import { ArrowRight, CalendarCheck2, Check, Pencil, ShieldCheck, Trash2 } from "lucide-react";
 import { useCircle } from "@/lib/circle-store";
+import { DOCTORS } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
 import ProfileForm from "./ProfileForm";
 import MembershipList from "./MembershipList";
@@ -13,12 +15,13 @@ type Step = 1 | 2;
  * Two-step onboarding:
  *  1. Your details (private)
  *  2. Your circles: suggested groups to join based on those details, then verification.
+ * `next` = where to send the user once they're done (set by the profile gate).
  */
-export default function ProfileOnboarding() {
-  const { profile, hydrated } = useCircle();
+export default function ProfileOnboarding({ next }: { next?: string }) {
+  const { profile, hydrated, appointments, cancelAppointment } = useCircle();
   const [step, setStep] = useState<Step | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
 
-  // Pick the starting step once storage has loaded: existing profile -> circles.
   useEffect(() => {
     if (hydrated && step === null) queueMicrotask(() => setStep(profile ? 2 : 1));
   }, [hydrated, profile, step]);
@@ -41,26 +44,75 @@ export default function ProfileOnboarding() {
           <p className="mb-4 text-sm text-slate-600">
             We&apos;ll use this to suggest communities you already belong to. Nothing here is shown publicly.
           </p>
-          <ProfileForm onSaved={() => setStep(2)} />
+          <ProfileForm
+            onSaved={() => {
+              setJustSaved(true);
+              setStep(2);
+            }}
+          />
         </section>
       ) : (
-        <section aria-labelledby="circles-heading" className="fade-up">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 id="circles-heading" className="text-xl font-bold text-slate-900">
-                {profile ? `Circles for you, ${profile.name.split(" ")[0]}` : "Your circles"}
-              </h2>
-              <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-600">
-                <ShieldCheck className="h-4 w-4 text-brand-700" aria-hidden />
-                Join the groups that fit, then verify privately. Only the group label ever appears on a review.
+        <section aria-labelledby="circles-heading" className="fade-up space-y-8">
+          {next && justSaved && (
+            <div className="fade-up flex flex-col gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-brand-900">
+                <span className="font-semibold">Profile saved.</span> Join a circle or two below, or head straight back to what you were doing.
               </p>
+              <Link href={next} className="btn-primary shrink-0">
+                Continue
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
             </div>
-            <button type="button" className="btn-ghost" onClick={() => setStep(1)}>
-              <Pencil className="h-4 w-4" aria-hidden />
-              Edit details
-            </button>
+          )}
+
+          <div>
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 id="circles-heading" className="text-xl font-bold text-slate-900">
+                  {profile ? `Circles for you, ${profile.name.split(" ")[0]}` : "Your circles"}
+                </h2>
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-600">
+                  <ShieldCheck className="h-4 w-4 text-brand-700" aria-hidden />
+                  Join the groups that fit, then verify privately. Only the group label ever appears on a review.
+                </p>
+              </div>
+              <button type="button" className="btn-ghost" onClick={() => setStep(1)}>
+                <Pencil className="h-4 w-4" aria-hidden />
+                Edit details
+              </button>
+            </div>
+            <MembershipList />
           </div>
-          <MembershipList />
+
+          {appointments.length > 0 && (
+            <div aria-labelledby="appts-heading">
+              <h2 id="appts-heading" className="mb-3 text-xl font-bold text-slate-900">Your appointments</h2>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {appointments.map((a) => {
+                  const d = DOCTORS.find((x) => x.id === a.doctorId);
+                  return (
+                    <li key={a.id} className="card flex items-start justify-between gap-3 p-4">
+                      <div>
+                        <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                          <CalendarCheck2 className="h-4 w-4 text-brand-700" aria-hidden />
+                          {d?.name ?? "Doctor"}
+                        </p>
+                        <p className="mt-0.5 text-sm text-slate-700">
+                          {new Date(a.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })} · {a.time}
+                          {a.priority && <span className="ml-1 text-xs font-semibold text-peer-700">· priority</span>}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-500">Ref {a.reference}{a.reason ? ` · ${a.reason}` : ""} · awaiting clinic confirmation</p>
+                      </div>
+                      <button type="button" className="btn-ghost px-2 py-1.5 text-xs" onClick={() => cancelAppointment(a.id)} aria-label={`Cancel appointment ${a.reference}`}>
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                        Cancel
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </section>
       )}
     </div>

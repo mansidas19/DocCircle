@@ -4,7 +4,11 @@ import ProfileOnboarding from "@/components/ProfileOnboarding";
 
 export const metadata: Metadata = { title: "My profile & circles — DocCircle" };
 
-export default function ProfilePage() {
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const { next } = await searchParams;
+  // Only allow same-site relative redirects.
+  const safeNext = typeof next === "string" && next.startsWith("/") && !next.startsWith("//") ? next : undefined;
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <p className="eyebrow flex items-center gap-1.5 text-brand-700">
@@ -18,7 +22,7 @@ export default function ProfilePage() {
       </p>
 
       <div className="mt-8">
-        <ProfileOnboarding />
+        <ProfileOnboarding next={safeNext} />
       </div>
     </div>
   );

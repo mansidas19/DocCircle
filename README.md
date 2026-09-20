@@ -27,7 +27,9 @@ Anonymous detailed experiences + AI experience summary
 - **Search** by specialty + city with two segments: *Peer Reviewed for You* (first) and *All Doctors*. The empty peer state keeps the product useful when a circle has no reviews yet.
 - **Doctor profile**: provider info, peer-trust block with per-community breakdown, experience breakdown (communication, listening, fees, waiting), cached AI summary, anonymous detailed reviews.
 - **Profile & circles** (`/profile`): private details (college, employer, work email) derive your communities; verify membership via email code, document review or invite code, or create your own peer group.
-- **Ask My Circle**: toggle communities and watch every signal in the app change. Includes a lightweight *Create a Community* flow with a mock invite link.
+- **Ask My Circle** (`/circle`): a conversational concierge. Describe what you need in plain words; a server-side Claude call asks at most two clarifying questions, picks the specialty, reasons over what your circles actually wrote, and returns ranked recommendations with reasoning, anonymous evidence quotes and one-tap booking. Falls back to deterministic offline reasoning without an API key.
+- **Book appointment**: pick a day and slot on any doctor profile; priority slots unlock after your first shared experience.
+- **Profile gate**: search, doctor profiles and Ask My Circle require a completed profile, because every signal is personalised to your circles.
 - **Share your experience**: a sub-60-second structured form plus optional written experience.
 - **Fable moderation**: the written text is sent to a server-side API route which returns strict JSON (medical claims, personal info, abuse, promo and spam flags; per-dimension sentiment; experience themes; a safe public summary). Flagged reviews get friendly guidance instead of being published.
 - **Demo fallback**: with no API key the same route returns deterministic mock moderation, clearly labelled, so the demo never breaks.
@@ -67,6 +69,8 @@ src/app
   circle/page.tsx                Ask My Circle
   review/page.tsx                review submission
   api/moderate-review/route.ts   server-side Fable moderation
+  api/concierge/route.ts         Ask My Circle concierge (structured output over community text)
+  profile/page.tsx               two-step onboarding: details -> suggested circles
 src/components                   UI
 src/lib
   types.ts        data model (DB-ready shape)

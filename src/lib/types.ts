@@ -162,6 +162,58 @@ export interface Membership {
   joinedAt: string;
 }
 
+/** A booked visit (demo: stored client-side). */
+export interface Appointment {
+  id: string;
+  /** Short reference shown to the user, e.g. DC-7K2Q */
+  reference: string;
+  doctorId: string;
+  /** ISO date YYYY-MM-DD */
+  date: string;
+  /** e.g. "10:30" */
+  time: string;
+  reason: string;
+  priority: boolean;
+  createdAt: string;
+}
+
+/* ---------------- Ask My Circle concierge ---------------- */
+
+export interface ConciergeMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ConciergeRecommendation {
+  doctorId: string;
+  headline: string;
+  why: string;
+  /** Anonymous evidence lines, each prefixed with the community label */
+  evidence: string[];
+}
+
+export interface ConciergeResult {
+  /** question = needs 1 more detail; answer = synthesized recommendation; urgent = seek care now */
+  type: "question" | "answer" | "urgent";
+  message: string;
+  understood: {
+    specialty: string | null;
+    city: string | null;
+    need: string | null;
+  };
+  reasoning: string[];
+  recommendations: ConciergeRecommendation[];
+  caveats: string[];
+}
+
+export interface ConciergeResponse {
+  result: ConciergeResult;
+  mode: "fable" | "mock";
+  model?: string;
+  /** Names of the communities whose experiences were consulted */
+  circlesConsulted: string[];
+}
+
 /** Aggregated, anonymous signal for one community on one doctor. */
 export interface CommunitySignalStat {
   community: Community;

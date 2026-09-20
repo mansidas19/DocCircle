@@ -26,8 +26,7 @@ export default function HomePage() {
               DocCircle · Word of mouth, done properly
             </p>
             <h1 className="mt-5 text-4xl font-extrabold leading-[1.08] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-              The right doctor changes everything.{" "}
-              <span className="text-brand-700">The wrong one costs you time you don&apos;t get back.</span>
+              The right doctor <span className="text-brand-700">changes everything.</span>
             </h1>
             <p className="mt-6 text-lg text-slate-600">
               Think about the last time you searched for a doctor. Was it through Google reviews, or
@@ -57,7 +56,7 @@ export default function HomePage() {
             <div className="mt-6">
               <Link href="/circle" className="btn-ghost">
                 <Users className="h-4 w-4" aria-hidden />
-                Ask My Circle
+                Or just describe what you need to Ask My Circle
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </div>
