@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DocCircle
 
-## Getting Started
+**Find doctors through people you trust.**
 
-First, run the development server:
+DocCircle is a doctor-discovery prototype with a peer-trust layer. Think "Zomato for doctors", but instead of relying only on anonymous star ratings it shows whether people from communities you belong to (alumni network, workplace, friends, family) have visited a doctor and would recommend them.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+> Prototype — demo data. All doctors, clinics and reviews are fictional. DocCircle provides community experience information, not medical advice.
+
+## The core idea
+
+```
+Dermatology + Bangalore
+        ↓
+Peer Reviewed for You          ← doctors your circles have visited
+        ↓
+Dr. Meera Sharma
+6 NIT Alumni visited · 5 recommend
+2 Workplace visited · 2 recommend
+        ↓
+Anonymous detailed experiences + AI experience summary
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Anonymous publicly, verified privately.** Reviewers are never named. The platform verifies community membership privately and shows only the community label and aggregate counts.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Search** by specialty + city with two segments: *Peer Reviewed for You* (first) and *All Doctors*. The empty peer state keeps the product useful when a circle has no reviews yet.
+- **Doctor profile**: provider info, peer-trust block with per-community breakdown, experience breakdown (communication, listening, fees, waiting), cached AI summary, anonymous detailed reviews.
+- **Ask My Circle**: toggle communities and watch every signal in the app change. Includes a lightweight *Create a Community* flow with a mock invite link.
+- **Share your experience**: a sub-60-second structured form plus optional written experience.
+- **Fable moderation**: the written text is sent to a server-side API route which returns strict JSON (medical claims, personal info, abuse, promo and spam flags; per-dimension sentiment; experience themes; a safe public summary). Flagged reviews get friendly guidance instead of being published.
+- **Demo fallback**: with no API key the same route returns deterministic mock moderation, clearly labelled, so the demo never breaks.
 
-## Learn More
+## Run it
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install
+cp .env.example .env.local   # optional: add FABLE_API_KEY for live moderation
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open http://localhost:3000.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Environment
 
-## Deploy on Vercel
+| Variable | Required | Notes |
+|---|---|---|
+| `FABLE_API_KEY` | No | Server-side only. Empty = demo mode with mock moderation. `ANTHROPIC_API_KEY` is also accepted. |
+| `FABLE_MODEL` | No | Defaults to `claude-fable-5-1`; falls back to `claude-opus-5` if the key cannot access it. |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Demo script (3 minutes)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Problem** (landing page): Google has reviews, but not the answer to "has someone I trust been here?"
+2. **Search** Dermatologist + Bangalore. Show *Peer Reviewed for You* above *All Doctors*.
+3. **Profile** Dr. Meera Sharma: community counts, anonymous reviews highlighted for your circles, AI summary.
+4. **Ask My Circle**: untick Workplace, tick Family, watch results change. Try Dentist + Bangalore for the empty state.
+5. **Share experience**: submit a review. Try `"She prescribed X and cured my rash"` to see a medical-claim flag, then a clean review to see it land on the profile instantly.
+
+## Structure
+
+```
+src/app
+  page.tsx                       landing
+  doctors/page.tsx               search results (two segments)
+  doctors/[id]/page.tsx          doctor profile
+  circle/page.tsx                Ask My Circle
+  review/page.tsx                review submission
+  api/moderate-review/route.ts   server-side Fable moderation
+src/components                   UI
+src/lib
+  types.ts        data model (DB-ready shape)
+  demo-data.ts    11 doctors, 4 communities, 43 reviews (fictional)
+  utils.ts        signal aggregation + segmentation
+  moderation.ts   prompt, output schema, mock fallback
+  circle-store.tsx client session state (selected circles, custom communities, submitted reviews)
+```
+
+Built with Next.js (App Router), TypeScript, Tailwind CSS, lucide-react and the Anthropic TypeScript SDK.
